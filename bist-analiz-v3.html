@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BIST Risk & Potansiyel Analizi</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@300;400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0f;
+    --surface: #0b1420;
+    --surface2: #0f1d2e;
+    --border: #1a3050;
+    --accent: #00d4ff;
+    --green: #00e676;
+    --red: #ff1744;
+    --yellow: #ffd600;
+    --text: #c8daea;
+    --text-dim: #4a6b8a;
+    --text-bright: #e8f4ff;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'IBM Plex Sans',sans-serif; min-height:100vh; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,212,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,0.03) 1px,transparent 1px); background-size:40px 40px; pointer-events:none; z-index:0; }
+  body::after { content:''; position:fixed; width:600px; height:600px; border-radius:50%; background:radial-gradient(circle,rgba(0,212,255,0.04) 0%,transparent 70%); top:-100px; right:-100px; pointer-events:none; z-index:0; }
+
+  header { position:relative; z-index:10; display:flex; align-items:center; justify-content:space-between; padding:20px 40px; border-bottom:1px solid var(--border); background:rgba(5,10,15,0.9); backdrop-filter:blur(10px); }
+  .logo { display:flex; align-items:center; gap:14px; }
+  .logo-icon { width:42px; height:42px; border:2px solid var(--accent); display:flex; align-items:center; justify-content:center; clip-path:polygon(10% 0%,90% 0%,100% 10%,100% 90%,90% 100%,10% 100%,0% 90%,0% 10%); background:rgba(0,212,255,0.1); font-size:20px; color:var(--accent); font-weight:700; }
+  .logo-text { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:3px; color:var(--text-bright); }
+  .logo-sub { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; text-transform:uppercase; margin-top:-4px; }
+  .header-right { display:flex; align-items:center; gap:20px; }
+  .header-status { display:flex; align-items:center; gap:8px; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--green); }
+  .status-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  .ticker-strip { background:var(--surface2); border-bottom:1px solid var(--border); overflow:hidden; height:36px; display:flex; align-items:center; position:relative; z-index:9; }
+  .ticker-track { display:flex; gap:0; white-space:nowrap; animation:tickerMove 60s linear infinite; }
+  .ticker-track:hover { animation-play-state:paused; }
+  .ticker-item { display:inline-flex; align-items:center; gap:8px; padding:0 24px; border-right:1px solid var(--border); cursor:pointer; transition:background 0.2s; }
+  .ticker-item:hover { background:rgba(0,212,255,0.06); }
+  .ticker-sym { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--accent); letter-spacing:1px; }
+  .ticker-price { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-bright); }
+  .ticker-chg { font-family:'IBM Plex Mono',monospace; font-size:10px; }
+  .ticker-chg.up { color:var(--green); }
+  .ticker-chg.dn { color:var(--red); }
+  @keyframes tickerMove { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  main { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:36px 40px; }
+  .page-title { margin-bottom:32px; animation:fadeInDown 0.6s ease; }
+  .page-title h1 { font-family:'Bebas Neue',sans-serif; font-size:clamp(32px,5vw,60px); letter-spacing:4px; line-height:1; color:var(--text-bright); }
+  .page-title h1 span { color:var(--accent); }
+  .page-title p { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-dim); margin-top:8px; letter-spacing:1px; }
+  @keyframes fadeInDown { from{opacity:0;transform:translateY(-20px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+  .stock-picker-panel { background:var(--surface); border:1px solid var(--border); padding:28px 32px; margin-bottom:24px; position:relative; animation:fadeIn 0.6s ease 0.05s both; }
+  .stock-picker-panel::before { content:'HISSE SECIMI'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .picker-row { display:flex; gap:14px; align-items:flex-start; flex-wrap:wrap; }
+  .autocomplete-wrap { position:relative; flex:1; min-width:220px; }
+  .autocomplete-wrap input { width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text-bright); font-family:'IBM Plex Mono',monospace; font-size:16px; padding:13px 16px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; text-transform:uppercase; }
+  .autocomplete-wrap input:focus { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+  .autocomplete-wrap input::placeholder { color:var(--text-dim); font-size:13px; text-transform:none; }
+  .dropdown-list { position:absolute; top:100%; left:0; right:0; background:var(--surface2); border:1px solid var(--accent); border-top:none; z-index:100; max-height:240px; overflow-y:auto; display:none; }
+  .dropdown-list.open { display:block; }
+  .dropdown-item { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; cursor:pointer; transition:background 0.15s; border-bottom:1px solid var(--border); }
+  .dropdown-item:last-child { border-bottom:none; }
+  .dropdown-item:hover, .dropdown-item.active { background:rgba(0,212,255,0.08); }
+  .di-left { display:flex; flex-direction:column; gap:2px; }
+  .di-sym { font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600; color:var(--accent); }
+  .di-name { font-size:11px; color:var(--text-dim); }
+  .di-sector { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); background:rgba(255,255,255,0.04); padding:2px 6px; border:1px solid var(--border); }
+  .fetch-btn { background:transparent; border:1px solid var(--accent); color:var(--accent); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; padding:13px 22px; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+  .fetch-btn:hover { background:var(--accent); color:var(--bg); }
+  .fetch-btn:disabled { opacity:0.4; cursor:not-allowed; }
+  .live-price-display { background:var(--bg); border:1px solid var(--border); padding:12px 16px; display:none; flex-wrap:wrap; gap:16px; margin-top:14px; align-items:center; }
+  .live-price-display.show { display:flex; }
+  .lpd-sym { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:2px; color:var(--accent); }
+  .lpd-price { font-family:'IBM Plex Mono',monospace; font-size:22px; font-weight:600; color:var(--text-bright); }
+  .lpd-chg { font-family:'IBM Plex Mono',monospace; font-size:13px; }
+  .lpd-chg.up { color:var(--green); }
+  .lpd-chg.dn { color:var(--red); }
+  .lpd-meta { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); }
+  .lpd-meta span { display:block; margin:2px 0; }
+  .lpd-autofill { background:transparent; border:1px solid var(--green); color:var(--green); font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px; padding:5px 12px; cursor:pointer; transition:all 0.2s; margin-left:auto; }
+  .lpd-autofill:hover { background:var(--green); color:var(--bg); }
+  .fetch-error { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--red); margin-top:10px; padding:8px 14px; border:1px solid rgba(255,23,68,0.3); background:rgba(255,23,68,0.05); display:none; }
+  .fetch-error.show { display:block; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+
+  .input-panel { background:var(--surface); border:1px solid var(--border); padding:32px; margin-bottom:32px; position:relative; animation:fadeIn 0.7s ease 0.1s both; }
+  .input-panel::before { content:'VERI GIRISI'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .input-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:20px; margin-bottom:24px; }
+  .field { display:flex; flex-direction:column; gap:7px; }
+  .field label { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; }
+  .field input,.field select { background:var(--bg); border:1px solid var(--border); color:var(--text-bright); font-family:'IBM Plex Mono',monospace; font-size:15px; padding:12px 14px; outline:none; transition:border-color 0.2s,box-shadow 0.2s; -webkit-appearance:none; width:100%; }
+  .field input:focus,.field select:focus { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent),inset 0 0 20px rgba(0,212,255,0.03); }
+  .field input::placeholder { color:var(--text-dim); font-size:13px; }
+  .field select option { background:var(--surface2); }
+  .field input.autofilled { border-color:var(--green); background:rgba(0,230,118,0.04); }
+  .calc-btn { display:block; width:100%; padding:16px; background:var(--accent); color:var(--bg); font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:4px; border:none; cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden; }
+  .calc-btn:hover { background:#33ddff; transform:translateY(-1px); box-shadow:0 6px 24px rgba(0,212,255,0.3); }
+
+  .results { display:none; animation:fadeIn 0.5s ease; }
+  .results.active { display:block; }
+  .score-row { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px; }
+  .score-card { background:var(--surface); border:1px solid var(--border); padding:28px; position:relative; text-align:center; overflow:hidden; }
+  .score-card::before { content:attr(data-label); position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .score-card.risk::before { color:var(--red); }
+  .score-card.potential::before { color:var(--green); }
+  .score-card .bg-glow { position:absolute; inset:0; opacity:0.04; pointer-events:none; }
+  .score-card.risk .bg-glow { background:var(--red); }
+  .score-card.potential .bg-glow { background:var(--green); }
+  .gauge-wrapper { position:relative; width:180px; height:100px; margin:0 auto 8px; }
+  .gauge-wrapper svg { width:100%; height:100%; overflow:visible; }
+  .score-value { font-family:'Bebas Neue',sans-serif; font-size:72px; line-height:1; letter-spacing:2px; }
+  .score-card.risk .score-value { color:var(--red); }
+  .score-card.potential .score-value { color:var(--green); }
+  .score-label { font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:3px; color:var(--text-dim); margin-top:4px; }
+  .score-grade { display:inline-block; margin-top:10px; padding:4px 16px; font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; letter-spacing:2px; border:1px solid; }
+  .metrics-section { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:14px; margin-bottom:22px; }
+  .metric-box { background:var(--surface); border:1px solid var(--border); padding:18px; position:relative; }
+  .metric-box::after { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .metric-box.positive::after{background:var(--green)} .metric-box.negative::after{background:var(--red)} .metric-box.neutral::after{background:var(--accent)} .metric-box.warning::after{background:var(--yellow)}
+  .metric-name { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase; margin-bottom:7px; }
+  .metric-val { font-family:'IBM Plex Mono',monospace; font-size:20px; font-weight:600; color:var(--text-bright); }
+  .metric-val.pos{color:var(--green)} .metric-val.neg{color:var(--red)}
+  .metric-desc { font-size:11px; color:var(--text-dim); margin-top:5px; line-height:1.5; }
+  .scenario-section { background:var(--surface); border:1px solid var(--border); padding:28px; margin-bottom:22px; position:relative; }
+  .scenario-section::before { content:'SENARYO ANALIZI'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .scenario-bar { display:flex; align-items:center; gap:14px; margin-bottom:12px; }
+  .scenario-name { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); width:130px; flex-shrink:0; }
+  .bar-track { flex:1; height:26px; background:var(--bg); border:1px solid var(--border); position:relative; overflow:hidden; }
+  .bar-fill { height:100%; transition:width 1.2s cubic-bezier(0.16,1,0.3,1); display:flex; align-items:center; justify-content:flex-end; padding-right:8px; }
+  .bar-fill-text { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; color:var(--bg); white-space:nowrap; }
+  .scenario-price { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; width:80px; text-align:right; flex-shrink:0; }
+  .breakdown-section { background:var(--surface); border:1px solid var(--border); padding:28px; margin-bottom:22px; position:relative; }
+  .breakdown-section::before { content:'RISK FAKTOR ANALIZI'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--red); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .risk-item { display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid rgba(26,48,80,0.5); }
+  .risk-item:last-child{border-bottom:none}
+  .risk-item-left { display:flex; align-items:center; gap:12px; }
+  .risk-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .risk-factor-name { font-size:13px; color:var(--text); }
+  .risk-factor-desc { font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); margin-top:3px; }
+  .risk-badge { font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:4px 12px; border:1px solid; letter-spacing:1px; }
+  .verdict-section { background:var(--surface); border:1px solid var(--border); padding:28px; position:relative; margin-bottom:22px; display:flex; gap:28px; align-items:center; }
+  .verdict-section::before { content:'GENEL DEGERLENDIRME'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--yellow); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .verdict-icon { font-size:52px; flex-shrink:0; }
+  .verdict-text h3 { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:3px; margin-bottom:8px; }
+  .verdict-text p { font-size:14px; line-height:1.8; color:var(--text); }
+  .chart-section { background:var(--surface); border:1px solid var(--border); padding:28px; margin-bottom:22px; position:relative; }
+  .chart-section::before { content:'FIYAT HEDEFLERI'; position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .price-line { position:absolute; height:100%; top:0; display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .price-label { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); white-space:nowrap; }
+  .price-val { font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; white-space:nowrap; }
+  .disclaimer { border-top:1px solid var(--border); margin-top:36px; padding-top:18px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-dim); line-height:1.8; }
+
+  .charts-grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:22px; }
+  .chart-box { background:var(--surface); border:1px solid var(--border); padding:24px; position:relative; }
+  .chart-box::before { content:attr(data-title); position:absolute; top:-10px; left:24px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:4px; background:var(--surface); padding:0 10px; }
+  .chart-box canvas { width:100%; height:220px; display:block; }
+  .chart-legend { display:flex; gap:16px; justify-content:center; margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); }
+  .chart-legend span { display:flex; align-items:center; gap:6px; }
+  .chart-legend i { display:inline-block; width:10px; height:10px; border-radius:2px; }
+
+  .hosting-info { background:var(--surface2); border:1px solid var(--border); padding:20px 24px; margin-bottom:24px; border-left:3px solid var(--accent); }
+  .hosting-info h4 { font-family:'Bebas Neue',sans-serif; font-size:18px; color:var(--accent); letter-spacing:2px; margin-bottom:10px; }
+  .hosting-info p { font-size:13px; color:var(--text-dim); line-height:1.7; margin-bottom:8px; }
+  .hosting-info code { background:rgba(0,212,255,0.1); padding:2px 6px; border-radius:3px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--accent); }
+  .hosting-info ol { margin-left:20px; color:var(--text-dim); font-size:13px; line-height:1.8; }
+  .hosting-info li { margin-bottom:4px; }
+
+  @media(max-width:768px){header{padding:14px 16px}main{padding:20px 16px}.score-row{grid-template-columns:1fr}.charts-grid{grid-template-columns:1fr}.verdict-section{flex-direction:column;text-align:center}.picker-row{flex-direction:column}.live-price-display{flex-direction:column;align-items:flex-start}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">&#x20BA;</div>
+    <div>
+      <div class="logo-text">BIST ANALIZ</div>
+      <div class="logo-sub">Risk & Potansiyel Hesaplama</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-status">
+      <div class="status-dot"></div>
+      <span id="liveStatusText">SISTEM AKTIF</span>
+    </div>
+  </div>
+</header>
+
+<div class="ticker-strip">
+  <div class="ticker-track" id="tickerTrack"></div>
+</div>
+
+<main>
+  <div class="page-title">
+    <h1>HISSE <span>RISK</span> & POTANSIYEL<br>ANALIZ PLATFORMU</h1>
+    <p>// Borsa Istanbul hisseleri icin profesyonel risk-getiri modelleme sistemi</p>
+  </div>
+
+  <div class="hosting-info" id="hostingInfo">
+    <h4>ONLINE KULLANIM BILGISI</h4>
+    <p>Bu uygulama <strong>tarayici guvenlik kisitlamalari (CORS)</strong> nedeniyle dogrudan bilgisayarinizdan calismayabilir. Asagidaki adimlari takip edin:</p>
+    <ol>
+      <li><strong>GitHub Pages (Ucretsiz):</strong> Dosyayi GitHub'a yukleyip Settings > Pages > Deploy from branch (main) secin. Site aninda online olur.</li>
+      <li><strong>Netlify Drop (Ucretsiz):</strong> <a href="https://app.netlify.com/drop" target="_blank" style="color:var(--accent)">app.netlify.com/drop</a> adresine gidip dosyayi surukleyip birakin.</li>
+      <li><strong>Yerel Sunucu:</strong> Terminalde <code>python -m http.server 8000</code> veya <code>npx serve</code> calistirin, sonra <code>http://localhost:8000</code> acin.</li>
+    </ol>
+    <p style="margin-top:10px;color:var(--yellow)">Not: CORS kisitlamasi olmadan canli veri cekmek icin uygulamayi mutlaka bir web sunucusunda (GitHub Pages/Netlify) calistirin.</p>
+  </div>
+
+  <div class="stock-picker-panel">
+    <div class="picker-row">
+      <div class="autocomplete-wrap">
+        <input type="text" id="stockInput" placeholder="Hisse kodu yazin veya listeden secin..." autocomplete="off">
+        <div class="dropdown-list" id="dropdownList"></div>
+      </div>
+      <button class="fetch-btn" id="fetchBtn" onclick="manualFetch()">
+        <span id="fetchBtnText">📡 CANLI FIYAT CEK</span>
+      </button>
+    </div>
+    <div class="live-price-display" id="livePriceDisplay">
+      <div class="lpd-sym" id="lpdSym">--</div>
+      <div>
+        <div class="lpd-price" id="lpdPrice">--</div>
+        <div class="lpd-chg" id="lpdChg">--</div>
+      </div>
+      <div class="lpd-meta" id="lpdMeta"></div>
+      <button class="lpd-autofill" onclick="autofillFromLive()">▼ FORMU DOLDUR</button>
+    </div>
+    <div class="fetch-error" id="fetchError"></div>
+  </div>
+
+  <div class="input-panel">
+    <div class="input-grid">
+      <div class="field"><label>Hisse Senedi Kodu</label><input type="text" id="ticker" placeholder="THYAO, ASELS..." maxlength="8"></div>
+      <div class="field"><label>Guncel Fiyat (&#x20BA;)</label><input type="number" id="currentPrice" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Alis Fiyati (&#x20BA;)</label><input type="number" id="buyPrice" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Hedef Fiyat (&#x20BA;)</label><input type="number" id="targetPrice" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Beta Degeri</label><input type="number" id="beta" placeholder="1.00" min="0" max="5" step="0.01"></div>
+      <div class="field"><label>Piyasa Degeri</label>
+        <select id="marketCap"><option value="">Seciniz...</option><option value="large">Buyuk (&gt;10 Milyar &#x20BA;)</option><option value="mid">Orta (1-10 Milyar &#x20BA;)</option><option value="small">Kucuk (&lt;1 Milyar &#x20BA;)</option></select>
+      </div>
+      <div class="field"><label>Sektor</label>
+        <select id="sector"><option value="">Seciniz...</option><option value="banka">Bankacilik & Finans</option><option value="sanayi">Sanayi & Uretim</option><option value="enerji">Enerji</option><option value="teknoloji">Teknoloji</option><option value="perakende">Perakende</option><option value="insaat">Insaat & GYO</option><option value="havayolu">Havacilik & Ulasim</option><option value="savunma">Savunma</option><option value="diger">Diger</option></select>
+      </div>
+      <div class="field"><label>52 Haftalik En Yuksek (&#x20BA;)</label><input type="number" id="high52" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>52 Haftalik En Dusuk (&#x20BA;)</label><input type="number" id="low52" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Yatirim Tutari (&#x20BA;)</label><input type="number" id="investAmount" placeholder="0.00" min="0" step="100"></div>
+      <div class="field"><label>Stop-Loss (&#x20BA;)</label><input type="number" id="stopLoss" placeholder="0.00" min="0" step="0.01"></div>
+      <div class="field"><label>Risk Toleransi</label>
+        <select id="riskTolerance"><option value="dusuk">Dusuk - Temkinli</option><option value="orta" selected>Orta - Dengeli</option><option value="yuksek">Yuksek - Agresif</option></select>
+      </div>
+    </div>
+    <button class="calc-btn" onclick="calculate()">ANALIZI HESAPLA</button>
+  </div>
+
+  <div class="results" id="results">
+    <div class="score-row">
+      <div class="score-card risk" data-label="RISK SKORU">
+        <div class="bg-glow"></div>
+        <div class="gauge-wrapper">
+          <svg viewBox="0 0 200 110">
+            <defs><linearGradient id="riskGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#00e676"/><stop offset="50%" style="stop-color:#ffd600"/><stop offset="100%" style="stop-color:#ff1744"/></linearGradient></defs>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1a3050" stroke-width="14" stroke-linecap="round"/>
+            <path id="riskArc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#riskGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251" style="transition:stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)"/>
+            <line id="riskNeedle" x1="100" y1="100" x2="100" y2="30" stroke="#ff1744" stroke-width="3" stroke-linecap="round" style="transform-origin:100px 100px;transition:transform 1.4s cubic-bezier(0.16,1,0.3,1)"/>
+            <circle cx="100" cy="100" r="6" fill="#0b1420" stroke="#ff1744" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="score-value" id="riskScore">--</div>
+        <div class="score-label">/ 100</div>
+        <div class="score-grade" id="riskGrade">--</div>
+      </div>
+      <div class="score-card potential" data-label="POTANSIYEL SKORU">
+        <div class="bg-glow"></div>
+        <div class="gauge-wrapper">
+          <svg viewBox="0 0 200 110">
+            <defs><linearGradient id="potGrad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" style="stop-color:#1a3050"/><stop offset="100%" style="stop-color:#00e676"/></linearGradient></defs>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="#1a3050" stroke-width="14" stroke-linecap="round"/>
+            <path id="potArc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#potGrad)" stroke-width="14" stroke-linecap="round" stroke-dasharray="251" stroke-dashoffset="251" style="transition:stroke-dashoffset 1.4s cubic-bezier(0.16,1,0.3,1)"/>
+            <line id="potNeedle" x1="100" y1="100" x2="100" y2="30" stroke="#00e676" stroke-width="3" stroke-linecap="round" style="transform-origin:100px 100px;transition:transform 1.4s cubic-bezier(0.16,1,0.3,1)"/>
+            <circle cx="100" cy="100" r="6" fill="#0b1420" stroke="#00e676" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="score-value" id="potScore">--</div>
+        <div class="score-label">/ 100</div>
+        <div class="score-grade" id="potGrade">--</div>
+      </div>
+    </div>
+
+    <div class="metrics-section" id="metricsSection"></div>
+
+    <div class="charts-grid">
+      <div class="chart-box" data-title="FIYAT GRAFIGI (30 GUN)">
+        <canvas id="priceHistoryCanvas" height="220"></canvas>
+        <div class="chart-legend" id="priceLegend"></div>
+      </div>
+      <div class="chart-box" data-title="RISK FAKTOR RADAR">
+        <canvas id="radarCanvas" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-section"><div id="priceChart" style="position:relative;overflow:hidden;padding:20px 0 0;"></div></div>
+    <div class="scenario-section"><div id="scenarioBars"></div></div>
+    <div class="breakdown-section"><div id="riskFactors"></div></div>
+    <div class="verdict-section" id="verdictSection"></div>
+    <div class="disclaimer">YASAL UYARI: Bu platform yalnizca egitim ve bilgi amaclidir. Sunulan analizler yatirim tavsiyesi niteligi tasimamaktadir. Tum yatirim kararlari kisisel sorumlulugunuzdadır. Gecmis performans gelecekteki sonuclari garanti etmez. Fiyat verileri Yahoo Finance uzerinden alinmakta olup 15 dakika gecikmeli olabilir. Borsa Istanbulda yatirim yapmadan once lisansli bir finansal danismana basvurunuz.</div>
+  </div>
+</main>
+
+<script>
+// ==================== BIST HISSA LISTESI ====================
+const BIST_STOCKS = [
+  { sym:'THYAO', name:'Turk Hava Yollari', sector:'havayolu', yahoo:'THYAO.IS' },
+  { sym:'ASELS', name:'Aselsan Elektronik', sector:'savunma', yahoo:'ASELS.IS' },
+  { sym:'BIMAS', name:'BIM Birlesik Magazalar', sector:'perakende', yahoo:'BIMAS.IS' },
+  { sym:'EREGL', name:'Eregli Demir ve Celik', sector:'sanayi', yahoo:'EREGL.IS' },
+  { sym:'SISE',  name:'Sise Cam', sector:'sanayi', yahoo:'SISE.IS' },
+  { sym:'KCHOL', name:'Koc Holding', sector:'sanayi', yahoo:'KCHOL.IS' },
+  { sym:'AKBNK', name:'Akbank', sector:'banka', yahoo:'AKBNK.IS' },
+  { sym:'GARAN', name:'Garanti BBVA', sector:'banka', yahoo:'GARAN.IS' },
+  { sym:'ISCTR', name:'Is Bankasi', sector:'banka', yahoo:'ISCTR.IS' },
+  { sym:'YKBNK', name:'Yapi Kredi Bankasi', sector:'banka', yahoo:'YKBNK.IS' },
+  { sym:'HALKB', name:'Halkbank', sector:'banka', yahoo:'HALKB.IS' },
+  { sym:'VAKBN', name:'Vakifbank', sector:'banka', yahoo:'VAKBN.IS' },
+  { sym:'ENKAI', name:'Enka Insaat', sector:'insaat', yahoo:'ENKAI.IS' },
+  { sym:'TOASO', name:'Tofas Otomobil', sector:'sanayi', yahoo:'TOASO.IS' },
+  { sym:'FROTO', name:'Ford Otosan', sector:'sanayi', yahoo:'FROTO.IS' },
+  { sym:'TUPRS', name:'Tupras', sector:'enerji', yahoo:'TUPRS.IS' },
+  { sym:'SODA',  name:'Soda Sanayii', sector:'sanayi', yahoo:'SODA.IS' },
+  { sym:'ARCLK', name:'Arcelik', sector:'sanayi', yahoo:'ARCLK.IS' },
+  { sym:'VESBE', name:'Vestel Beyaz Esya', sector:'sanayi', yahoo:'VESBE.IS' },
+  { sym:'PGSUS', name:'Pegasus Hava Tasimaciligi', sector:'havayolu', yahoo:'PGSUS.IS' },
+  { sym:'MGROS', name:'Migros Ticaret', sector:'perakende', yahoo:'MGROS.IS' },
+  { sym:'ULKER', name:'Ulker Biskuvi', sector:'perakende', yahoo:'ULKER.IS' },
+  { sym:'KOZAL', name:'Koza Altin Isletmeleri', sector:'enerji', yahoo:'KOZAL.IS' },
+  { sym:'PETKM', name:'Petkim Petrokimya', sector:'enerji', yahoo:'PETKM.IS' },
+  { sym:'TAVHL', name:'TAV Havalimanlari', sector:'havayolu', yahoo:'TAVHL.IS' },
+  { sym:'SAHOL', name:'Sabanci Holding', sector:'sanayi', yahoo:'SAHOL.IS' },
+  { sym:'EKGYO', name:'Emlak Konut GYO', sector:'insaat', yahoo:'EKGYO.IS' },
+  { sym:'DOHOL', name:'Dogan Holding', sector:'sanayi', yahoo:'DOHOL.IS' },
+  { sym:'LOGO',  name:'Logo Yazilim', sector:'teknoloji', yahoo:'LOGO.IS' },
+  { sym:'NETAS', name:'Netas Telekomunikasyon', sector:'teknoloji', yahoo:'NETAS.IS' },
+  { sym:'TKFEN', name:'Tekfen Holding', sector:'insaat', yahoo:'TKFEN.IS' },
+  { sym:'AGHOL', name:'AG Anadolu Grubu', sector:'sanayi', yahoo:'AGHOL.IS' },
+  { sym:'AEFES', name:'Anadolu Efes Biracilik', sector:'perakende', yahoo:'AEFES.IS' },
+  { sym:'TTKOM', name:'Turk Telekom', sector:'teknoloji', yahoo:'TTKOM.IS' },
+  { sym:'TCELL', name:'Turkcell', sector:'teknoloji', yahoo:'TCELL.IS' },
+  { sym:'ODAS',  name:'Odas Elektrik', sector:'enerji', yahoo:'ODAS.IS' },
+  { sym:'ZOREN', name:'Zorlu Enerji', sector:'enerji', yahoo:'ZOREN.IS' },
+  { sym:'KRDMD', name:'Kardemir', sector:'sanayi', yahoo:'KRDMD.IS' },
+  { sym:'BRSAN', name:'Borusan Mannesmann', sector:'sanayi', yahoo:'BRSAN.IS' },
+  { sym:'DOAS',  name:'Dogus Otomotiv', sector:'sanayi', yahoo:'DOAS.IS' },
+  { sym:'HDFGS', name:'Hedef Finansal', sector:'banka', yahoo:'HDFGS.IS' },
+  { sym:'SOKM',  name:'Sok Marketler', sector:'perakende', yahoo:'SOKM.IS' },
+  { sym:'CIMSA', name:'Cimsa Cimento', sector:'sanayi', yahoo:'CIMSA.IS' },
+  { sym:'AKCNS', name:'AkCansa Cimento', sector:'sanayi', yahoo:'AKCNS.IS' },
+  { sym:'GUBRF', name:'Gubre Fabrikalari', sector:'sanayi', yahoo:'GUBRF.IS' },
+  { sym:'KONTR', name:'Kontrolmatik', sector:'teknoloji', yahoo:'KONTR.IS' },
+  { sym:'MAVI',  name:'Mavi Giyim', sector:'perakende', yahoo:'MAVI.IS' },
+  { sym:'LCAER', name:'LCW Moda', sector:'perakende', yahoo:'LCAER.IS' },
+  { sym:'ADESE', name:'Adese Alisveris', sector:'perakende', yahoo:'ADESE.IS' },
+  { sym:'ALARK', name:'Alarko Holding', sector:'enerji', yahoo:'ALARK.IS' },
+];
+
+const TICKER_INITIAL = ['THYAO','GARAN','ASELS','BIMAS','EREGL','TUPRS','ARCLK','TCELL','AKBNK','FROTO','KCHOL','ISCTR'];
+let liveData = {};
+let selectedStock = null;
+let priceHistory = [];
+let activeDropdownIndex = -1;
+
+// ==================== DROPDOWN LOGIC ====================
+const stockInput = document.getElementById('stockInput');
+const dropdownList = document.getElementById('dropdownList');
+
+stockInput.addEventListener('input', function() {
+  const val = this.value.toUpperCase().trim();
+  if (!val) { dropdownList.innerHTML = ''; dropdownList.classList.remove('open'); activeDropdownIndex = -1; return; }
+  const matches = BIST_STOCKS.filter(s => s.sym.startsWith(val) || s.name.toUpperCase().includes(val)).slice(0,12);
+  if (!matches.length) { 
+    dropdownList.innerHTML = '<div class="dropdown-item" style="color:var(--text-dim);cursor:default"><div class="di-left"><div class="di-name">Hisse bulunamadi</div></div></div>'; 
+    dropdownList.classList.add('open'); 
+    return; 
+  }
+  renderDropdown(matches);
+  dropdownList.classList.add('open');
+});
+
+stockInput.addEventListener('focus', function() {
+  if (!this.value.trim()) {
+    renderDropdown(BIST_STOCKS.slice(0,12));
+    dropdownList.classList.add('open');
+  }
+});
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    dropdownList.classList.remove('open');
+    activeDropdownIndex = -1;
+  }
+});
+
+stockInput.addEventListener('keydown', function(e) {
+  const items = dropdownList.querySelectorAll('.dropdown-item');
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    activeDropdownIndex = Math.min(activeDropdownIndex + 1, items.length - 1);
+    updateActiveItem(items);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    activeDropdownIndex = Math.max(activeDropdownIndex - 1, 0);
+    updateActiveItem(items);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (activeDropdownIndex >= 0 && items[activeDropdownIndex]) {
+      items[activeDropdownIndex].click();
+    } else if (this.value.trim()) {
+      selectStock(this.value.trim().toUpperCase());
+    }
+  } else if (e.key === 'Escape') {
+    dropdownList.classList.remove('open');
+    activeDropdownIndex = -1;
+  }
+});
+
+function updateActiveItem(items) {
+  items.forEach((item, i) => {
+    item.classList.toggle('active', i === activeDropdownIndex);
+  });
+  if (items[activeDropdownIndex]) {
+    items[activeDropdownIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function renderDropdown(stocks) {
+  dropdownList.innerHTML = stocks.map((s, i) => 
+    '<div class="dropdown-item" data-index="'+i+'" data-sym="'+s.sym+'"><div class="di-left"><div class="di-sym">'+s.sym+'</div><div class="di-name">'+s.name+'</div></div><div class="di-sector">'+sectorLabel(s.sector)+'</div></div>'
+  ).join('');
+
+  dropdownList.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const sym = this.getAttribute('data-sym');
+      selectStock(sym);
+    });
+  });
+}
+
+function selectStock(sym) {
+  selectedStock = BIST_STOCKS.find(s => s.sym === sym);
+  stockInput.value = sym;
+  dropdownList.classList.remove('open');
+  activeDropdownIndex = -1;
+  document.getElementById('ticker').value = sym;
+  if (selectedStock) document.getElementById('sector').value = selectedStock.sector;
+  fetchLivePrice();
+}
+
+function sectorLabel(s) {
+  const m = {banka:'BANKACILIK',sanayi:'SANAYI',enerji:'ENERJI',teknoloji:'TEKNOLOJI',perakende:'PERAKENDE',insaat:'INSAAT',havayolu:'HAVAYOLU',savunma:'SAVUNMA',diger:'DIGER'};
+  return m[s] || s.toUpperCase();
+}
+
+// ==================== CANLI FIYAT CEKME ====================
+async function manualFetch() {
+  const sym = stockInput.value.toUpperCase().trim();
+  if (!sym) { showError('Lutfen bir hisse kodu girin.'); return; }
+  selectStock(sym);
+}
+
+async function fetchLivePrice() {
+  const sym = stockInput.value.toUpperCase().trim();
+  if (!sym) return;
+
+  const stock = BIST_STOCKS.find(s => s.sym === sym);
+  const yahooSym = stock ? stock.yahoo : sym + '.IS';
+
+  const btn = document.getElementById('fetchBtn');
+  const btnText = document.getElementById('fetchBtnText');
+  btn.disabled = true;
+  btnText.innerHTML = '<span class="spinner"></span> VERI CEKILIYOR...';
+  document.getElementById('fetchError').classList.remove('show');
+  document.getElementById('livePriceDisplay').classList.remove('show');
+
+  try {
+    const proxyUrl = 'https://api.allorigins.win/raw?url=';
+    const quoteUrl = proxyUrl + encodeURIComponent('https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + yahooSym);
+
+    const quoteResp = await fetch(quoteUrl, { headers: { 'Accept': 'application/json' } });
+
+    let quoteData = null;
+    if (quoteResp.ok) {
+      const qd = await quoteResp.json();
+      if (qd.quoteResponse && qd.quoteResponse.result && qd.quoteResponse.result.length > 0) {
+        quoteData = qd.quoteResponse.result[0];
+      }
+    }
+
+    const chartUrl = proxyUrl + encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/' + yahooSym + '?interval=1d&range=1mo');
+    const chartResp = await fetch(chartUrl, { headers: { 'Accept': 'application/json' } });
+
+    let chartData = null;
+    if (chartResp.ok) {
+      const cd = await chartResp.json();
+      if (cd.chart && cd.chart.result && cd.chart.result.length > 0) {
+        chartData = cd.chart.result[0];
+      }
+    }
+
+    if (!quoteData && !chartData) throw new Error('Yahoo Financedan veri alinamadi. Hisse kodunu kontrol edin.');
+
+    let price = null, change = 0, changePercent = 0, prevClose = 0;
+    let high52 = null, low52 = null, volume = null, beta = null, marketCap = null;
+    let dayHigh = null, dayLow = null;
+
+    if (quoteData) {
+      price = quoteData.regularMarketPrice;
+      change = quoteData.regularMarketChange || 0;
+      changePercent = quoteData.regularMarketChangePercent || 0;
+      prevClose = quoteData.regularMarketPreviousClose || price;
+      high52 = quoteData.fiftyTwoWeekHigh || null;
+      low52 = quoteData.fiftyTwoWeekLow || null;
+      volume = quoteData.regularMarketVolume || null;
+      beta = quoteData.beta || null;
+      marketCap = quoteData.marketCap || null;
+      dayHigh = quoteData.regularMarketDayHigh || null;
+      dayLow = quoteData.regularMarketDayLow || null;
+    }
+
+    if (chartData && !price) {
+      const meta = chartData.meta;
+      const quote = chartData.indicators.quote[0];
+      const prices = quote.close;
+      for (let i = prices.length - 1; i >= 0; i--) {
+        if (prices[i] !== null && !isNaN(prices[i])) { price = prices[i]; break; }
+      }
+      prevClose = meta.previousClose || meta.chartPreviousClose || price;
+      change = price - prevClose;
+      changePercent = (change / prevClose) * 100;
+      high52 = meta.fiftyTwoWeekHigh || null;
+      low52 = meta.fiftyTwoWeekLow || null;
+    }
+
+    if (price === null || isNaN(price)) throw new Error('Gecerli fiyat verisi bulunamadi');
+
+    priceHistory = [];
+    if (chartData) {
+      const ts = chartData.timestamp;
+      const q = chartData.indicators.quote[0];
+      for (let i = 0; i < ts.length; i++) {
+        if (q.close[i] !== null) {
+          priceHistory.push({
+            date: new Date(ts[i] * 1000),
+            close: q.close[i],
+            high: q.high[i],
+            low: q.low[i],
+            open: q.open[i]
+          });
+        }
+      }
+    }
+
+    const parsed = {
+      symbol: sym, price: price, change: change, changePercent: changePercent,
+      high52: high52, low52: low52, volume: volume, marketCap: marketCap, beta: beta,
+      dayHigh: dayHigh, dayLow: dayLow, currency: 'TRY', timestamp: new Date().toISOString()
+    };
+
+    liveData[sym] = parsed;
+    showLivePrice(sym, parsed);
+    updateTickerItem(sym, parsed);
+    autofillFromLive();
+
+  } catch(e) {
+    let msg = e.message;
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('CORS') || msg.includes('cors')) {
+      msg = 'CORS/Ag hatasi. Cozumler: 1) Dosyayi GitHub Pages/Netlifyde host edin, 2) Yerel sunucu kullanin (python -m http.server 8000), 3) Verileri manuel girin.';
+    }
+    showError('Hata: ' + msg);
+    console.error('Fetch hatasi:', e);
+  } finally {
+    btn.disabled = false;
+    btnText.innerHTML = '📡 CANLI FIYAT CEK';
+  }
+}
+
+function showLivePrice(sym, d) {
+  document.getElementById('lpdSym').textContent = sym;
+  document.getElementById('lpdPrice').textContent = '₺' + Number(d.price).toFixed(2);
+  const chgEl = document.getElementById('lpdChg');
+  const sign = d.change >= 0 ? '+' : '';
+  chgEl.textContent = sign + Number(d.change).toFixed(2) + ' (' + sign + '%' + Number(d.changePercent).toFixed(2) + ')';
+  chgEl.className = 'lpd-chg ' + (d.change >= 0 ? 'up' : 'dn');
+
+  let metaHtml = '';
+  if (d.dayHigh && d.dayLow) metaHtml += '<span>Gunluk: ₺' + Number(d.dayLow).toFixed(2) + ' - ₺' + Number(d.dayHigh).toFixed(2) + '</span>';
+  if (d.high52 && d.low52) metaHtml += '<span>52H: ₺' + Number(d.low52).toFixed(2) + ' - ₺' + Number(d.high52).toFixed(2) + '</span>';
+  if (d.volume) metaHtml += '<span>Hacim: ' + (Number(d.volume)/1e6).toFixed(2) + 'M</span>';
+  if (d.beta !== null && d.beta !== undefined) metaHtml += '<span>Beta: ' + Number(d.beta).toFixed(2) + '</span>';
+  if (d.marketCap) metaHtml += '<span>Piyasa Degeri: ' + formatMarketCap(d.marketCap) + '</span>';
+  metaHtml += '<span>' + new Date(d.timestamp||Date.now()).toLocaleTimeString('tr-TR') + ' verisi</span>';
+  document.getElementById('lpdMeta').innerHTML = metaHtml;
+
+  document.getElementById('livePriceDisplay').classList.add('show');
+}
+
+function formatMarketCap(cap) {
+  if (!cap) return 'N/A';
+  const val = Number(cap);
+  if (val >= 1e12) return (val/1e12).toFixed(2) + ' Trilyon';
+  if (val >= 1e9) return (val/1e9).toFixed(2) + ' Milyar';
+  if (val >= 1e6) return (val/1e6).toFixed(2) + ' Milyon';
+  return val.toFixed(0);
+}
+
+function autofillFromLive() {
+  const sym = stockInput.value.toUpperCase().trim();
+  const d = liveData[sym];
+  if (!d) return;
+
+  // Tüm alanlari otomatik doldur
+  const fields = { 
+    ticker: sym, 
+    currentPrice: d.price, 
+    high52: d.high52, 
+    low52: d.low52, 
+    beta: d.beta 
+  };
+
+  Object.entries(fields).forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    if (el && val !== null && val !== undefined && !isNaN(val)) {
+      el.value = Number(val).toFixed(2);
+      el.classList.add('autofilled');
+      setTimeout(() => el.classList.remove('autofilled'), 2000);
+    }
+  });
+
+  // Piyasa degeri otomatik sec
+  if (d.marketCap) {
+    const mc = document.getElementById('marketCap');
+    const mcBillion = Number(d.marketCap) / 1e9;
+    if (mcBillion > 10000) mc.value = 'large';
+    else if (mcBillion > 1000) mc.value = 'mid';
+    else mc.value = 'small';
+    mc.classList.add('autofilled');
+    setTimeout(() => mc.classList.remove('autofilled'), 2000);
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('fetchError');
+  el.textContent = '⚠ ' + msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 10000);
+}
+
+function updateTickerItem(sym, d) {
+  const sign = d.change >= 0 ? '+' : '';
+  const cls = d.change >= 0 ? 'up' : 'dn';
+  document.querySelectorAll('.ticker-item').forEach(el => {
+    if (el.querySelector('.ticker-sym') && el.querySelector('.ticker-sym').textContent === sym) {
+      el.querySelector('.ticker-price').textContent = '₺' + Number(d.price).toFixed(2);
+      const chg = el.querySelector('.ticker-chg');
+      if (chg) { chg.textContent = sign + Number(d.changePercent).toFixed(2) + '%'; chg.className = 'ticker-chg ' + cls; }
+    }
+  });
+}
+
+function buildTickerStrip() {
+  const items = TICKER_INITIAL.map(sym => '<div class="ticker-item" data-sym="'+sym+'"><span class="ticker-sym">'+sym+'</span><span class="ticker-price" id="tp_'+sym+'">--</span><span class="ticker-chg" id="tc_'+sym+'"></span></div>').join('');
+  document.getElementById('tickerTrack').innerHTML = items + items;
+
+  document.querySelectorAll('.ticker-item').forEach(el => {
+    el.addEventListener('click', function() {
+      const sym = this.getAttribute('data-sym');
+      stockInput.value = sym;
+      selectStock(sym);
+    });
+  });
+}
+
+buildTickerStrip();
+
+const DEMO_PRICES = {
+  'THYAO': {price: 285.50, change: 5.20, changePercent: 1.85},
+  'GARAN': {price: 112.30, change: -1.10, changePercent: -0.97},
+  'ASELS': {price: 68.75, change: 0.45, changePercent: 0.66},
+  'BIMAS': {price: 420.00, change: 2.50, changePercent: 0.60},
+  'EREGL': {price: 55.80, change: -0.30, changePercent: -0.53},
+  'TUPRS': {price: 185.40, change: 1.20, changePercent: 0.65},
+  'ARCLK': {price: 142.60, change: 0.80, changePercent: 0.56},
+  'TCELL': {price: 78.90, change: -0.40, changePercent: -0.50},
+  'AKBNK': {price: 58.20, change: 0.30, changePercent: 0.52},
+  'FROTO': {price: 950.00, change: 5.00, changePercent: 0.53},
+  'KCHOL': {price: 195.30, change: 1.50, changePercent: 0.77},
+  'ISCTR': {price: 14.85, change: -0.05, changePercent: -0.34}
+};
+
+function loadDemoTicker() {
+  Object.entries(DEMO_PRICES).forEach(([sym, d]) => {
+    document.querySelectorAll('#tp_'+sym).forEach(el => el.textContent = '₺'+d.price.toFixed(2));
+    const sign = d.change >= 0 ? '+' : '';
+    const cls = d.change >= 0 ? 'up' : 'dn';
+    document.querySelectorAll('#tc_'+sym).forEach(el => { 
+      el.textContent = sign + d.changePercent.toFixed(2) + '%'; 
+      el.className = 'ticker-chg ' + cls; 
+    });
+  });
+}
+loadDemoTicker();
+
+// ==================== CANVAS GRAFIKLER (DUZELTILMIS) ====================
+function drawPriceHistory(canvasId, data) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { console.error('Canvas bulunamadi:', canvasId); return; }
+  if (!data || data.length < 2) { console.error('Veri yetersiz:', data); return; }
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+
+  // CSS boyutlarini al
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    console.error('Canvas boyutlari 0');
+    return;
+  }
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+
+  const prices = data.map(d => d.close);
+  const min = Math.min(...prices) * 0.98;
+  const max = Math.max(...prices) * 1.02;
+  const range = max - min;
+  if (range === 0) { console.error('Range 0'); return; }
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(26,48,80,0.5)';
+  ctx.lineWidth = 1;
+  for (let i = 1; i < 5; i++) {
+    const y = h - 20 - ((h - 40) * i / 5);
+    ctx.beginPath(); ctx.moveTo(40, y); ctx.lineTo(w - 10, y); ctx.stroke();
+  }
+
+  // Line
+  const stepX = (w - 50) / (data.length - 1);
+  ctx.beginPath();
+  ctx.strokeStyle = '#00d4ff';
+  ctx.lineWidth = 2;
+  data.forEach((d, i) => {
+    const x = 40 + i * stepX;
+    const y = h - 20 - ((d.close - min) / range) * (h - 40);
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Fill area
+  ctx.lineTo(40 + (data.length - 1) * stepX, h - 20);
+  ctx.lineTo(40, h - 20);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(0,212,255,0.08)';
+  ctx.fill();
+
+  // Points
+  data.forEach((d, i) => {
+    const x = 40 + i * stepX;
+    const y = h - 20 - ((d.close - min) / range) * (h - 40);
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff';
+    ctx.fill();
+  });
+
+  // Y labels
+  ctx.fillStyle = '#4a6b8a';
+  ctx.font = '10px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'right';
+  for (let i = 0; i <= 4; i++) {
+    const val = min + (range * i / 4);
+    ctx.fillText('₺' + val.toFixed(1), 35, h - 20 - (h - 40) * i / 4 + 3);
+  }
+
+  // X labels
+  ctx.textAlign = 'center';
+  const fmt = d => d.getDate() + '/' + (d.getMonth()+1);
+  ctx.fillText(fmt(data[0].date), 40, h - 5);
+  ctx.fillText(fmt(data[Math.floor(data.length/2)].date), 40 + Math.floor(data.length/2) * stepX, h - 5);
+  ctx.fillText(fmt(data[data.length-1].date), 40 + (data.length-1) * stepX, h - 5);
+}
+
+function drawRadar(canvasId, factors) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) { console.error('Radar canvas bulunamadi'); return; }
+  if (!factors || factors.length === 0) { console.error('Radar veri yok'); return; }
+
+  const ctx = canvas.getContext('2d');
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width === 0 || rect.height === 0) {
+    console.error('Radar canvas boyutlari 0');
+    return;
+  }
+
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+  const cx = w / 2, cy = h / 2 + 10;
+  const radius = Math.min(w, h) / 2 - 50;
+  const count = factors.length;
+  const angleStep = (Math.PI * 2) / count;
+
+  ctx.clearRect(0, 0, w, h);
+
+  // Grid circles
+  for (let i = 1; i <= 4; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(26,48,80,0.5)';
+    ctx.lineWidth = 1;
+    const r = (radius / 4) * i;
+    for (let j = 0; j <= count; j++) {
+      const angle = j * angleStep - Math.PI / 2;
+      const x = cx + Math.cos(angle) * r;
+      const y = cy + Math.sin(angle) * r;
+      if (j === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  // Axis lines + labels
+  for (let i = 0; i < count; i++) {
+    const angle = i * angleStep - Math.PI / 2;
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(26,48,80,0.5)';
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+    ctx.stroke();
+
+    const lx = cx + Math.cos(angle) * (radius + 25);
+    const ly = cy + Math.sin(angle) * (radius + 25);
+    ctx.fillStyle = '#4a6b8a';
+    ctx.font = '10px "IBM Plex Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(factors[i].name, lx, ly);
+  }
+
+  // Data polygon
+  ctx.beginPath();
+  ctx.fillStyle = 'rgba(255,23,68,0.2)';
+  ctx.strokeStyle = '#ff1744';
+  ctx.lineWidth = 2;
+  factors.forEach((f, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const val = Math.min(Math.max(f.value, 0), 100) / 100;
+    const x = cx + Math.cos(angle) * radius * val;
+    const y = cy + Math.sin(angle) * radius * val;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Points
+  factors.forEach((f, i) => {
+    const angle = i * angleStep - Math.PI / 2;
+    const val = Math.min(Math.max(f.value, 0), 100) / 100;
+    const x = cx + Math.cos(angle) * radius * val;
+    const y = cy + Math.sin(angle) * radius * val;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#ff1744';
+    ctx.fill();
+  });
+}
+
+// ==================== ANALIZ HESAPLAMA ====================
+function calculate() {
+  const ticker = document.getElementById('ticker').value.toUpperCase().trim();
+  const current = parseFloat(document.getElementById('currentPrice').value);
+  const buy = parseFloat(document.getElementById('buyPrice').value);
+  const target = parseFloat(document.getElementById('targetPrice').value);
+  const beta = parseFloat(document.getElementById('beta').value) || 1;
+  const marketCap = document.getElementById('marketCap').value;
+  const sector = document.getElementById('sector').value;
+  const high52 = parseFloat(document.getElementById('high52').value);
+  const low52 = parseFloat(document.getElementById('low52').value);
+  const invest = parseFloat(document.getElementById('investAmount').value);
+  const stop = parseFloat(document.getElementById('stopLoss').value);
+
+  if (!current || isNaN(current) || current <= 0) { alert('Lutfen gecerli bir Guncel Fiyat giriniz.'); return; }
+  if (!target || isNaN(target) || target <= 0) { alert('Lutfen gecerli bir Hedef Fiyat giriniz.'); return; }
+
+  const upside = ((target - current) / current) * 100;
+  const downside = stop && !isNaN(stop) && stop > 0 ? ((current - stop) / current) * 100 : null;
+  const rr = (downside && downside > 0) ? upside / downside : null;
+  const range52 = (high52 && !isNaN(high52) && low52 && !isNaN(low52) && high52 > low52) ? ((current - low52) / (high52 - low52)) * 100 : null;
+
+  let riskScore = 50;
+  if (beta < 0.5) riskScore -= 15; else if (beta < 0.8) riskScore -= 8; else if (beta > 1.8) riskScore += 25; else if (beta > 1.2) riskScore += 12;
+  if (marketCap === 'large') riskScore -= 10; else if (marketCap === 'small') riskScore += 15;
+  const sectorRisk = {banka:8,sanayi:5,enerji:10,teknoloji:15,perakende:5,insaat:12,havayolu:10,savunma:3,diger:7};
+  riskScore += sectorRisk[sector] || 0;
+  if (range52 !== null && !isNaN(range52)) { if (range52 > 85) riskScore += 12; else if (range52 > 70) riskScore += 6; else if (range52 < 20) riskScore -= 8; }
+  if (downside !== null && !isNaN(downside)) { if (downside > 20) riskScore += 10; else if (downside > 10) riskScore += 5; else riskScore -= 5; }
+  riskScore = Math.max(5, Math.min(95, Math.round(riskScore)));
+
+  let potScore = 40;
+  if (upside > 100) potScore = 90; else if (upside > 60) potScore = 78; else if (upside > 40) potScore = 68; else if (upside > 25) potScore = 58; else if (upside > 15) potScore = 48; else if (upside > 5) potScore = 35; else potScore = 20;
+  if (rr !== null && !isNaN(rr)) { if (rr > 3) potScore += 8; else if (rr > 2) potScore += 4; else if (rr < 1) potScore -= 8; }
+  if (range52 !== null && !isNaN(range52) && range52 < 20) potScore += 6;
+  potScore = Math.max(5, Math.min(95, Math.round(potScore)));
+
+  const rg = riskScore < 20 ? {label:'COK DUSUK',color:'#00e676'} : riskScore < 40 ? {label:'DUSUK',color:'#69f0ae'} : riskScore < 55 ? {label:'ORTA',color:'#ffd600'} : riskScore < 70 ? {label:'YUKSEK',color:'#ff9100'} : {label:'COK YUKSEK',color:'#ff1744'};
+  const pg = potScore > 80 ? {label:'MUKEMMEL',color:'#00e676'} : potScore > 65 ? {label:'YUKSEK',color:'#69f0ae'} : potScore > 50 ? {label:'ORTA',color:'#ffd600'} : potScore > 35 ? {label:'DUSUK',color:'#ff9100'} : {label:'COK DUSUK',color:'#ff1744'};
+
+  document.getElementById('riskScore').textContent = riskScore;
+  document.getElementById('potScore').textContent = potScore;
+  document.getElementById('riskGrade').textContent = rg.label;
+  document.getElementById('riskGrade').style.cssText = 'border-color:'+rg.color+';color:'+rg.color;
+  document.getElementById('potGrade').textContent = pg.label;
+  document.getElementById('potGrade').style.cssText = 'border-color:'+pg.color+';color:'+pg.color;
+
+  setTimeout(() => {
+    document.getElementById('riskArc').style.strokeDashoffset = 251 - (riskScore/100)*251;
+    document.getElementById('potArc').style.strokeDashoffset = 251 - (potScore/100)*251;
+    document.getElementById('riskNeedle').style.transform = 'rotate('+(-90+(riskScore/100)*180)+'deg)';
+    document.getElementById('potNeedle').style.transform = 'rotate('+(-90+(potScore/100)*180)+'deg)';
+  }, 100);
+
+  const fmt = (n,d) => n!==null&&!isNaN(n) ? n.toFixed(d) : 'N/A';
+  const potLoss = invest && !isNaN(invest) && stop && !isNaN(stop) ? ((current-stop)/current*invest) : null;
+  const potGain = invest && !isNaN(invest) ? (upside/100*invest) : null;
+  const metrics = [
+    {name:'Yukselis Potansiyeli', val:'%'+fmt(upside,1), cls:upside>0?'pos':'neg', bar:upside>0?'positive':'negative', desc:'Mevcut fiyattan hedef fiyata uzaklik'},
+    {name:'Risk/Odul Orani', val:rr!==null&&!isNaN(rr)?fmt(rr,2)+'x':'N/A', cls:rr!==null&&rr>2?'pos':rr!==null&&rr<1?'neg':'', bar:rr!==null&&rr>2?'positive':rr!==null&&rr<1?'negative':'neutral', desc:rr!==null?(rr>2?'Makul risk/odul dengesi':rr>1?'Kabul edilebilir':'Risk yuksek'):'Stop belirsiz'},
+    {name:'Beta', val:beta.toFixed(2), cls:beta<1?'pos':beta>1.5?'neg':'', bar:beta>1.5?'warning':'neutral', desc:beta>1?'Piyasadan daha volatil':'Piyasadan daha stabil'},
+    {name:'Max Kayip (₺)', val:potLoss!==null?'-₺'+fmt(potLoss,0):'N/A', cls:'neg', bar:'negative', desc:'Stop-loss seviyesinde potansiyel kayip'},
+    {name:'Max Kazanc (₺)', val:potGain!==null?'+₺'+fmt(potGain,0):'N/A', cls:'pos', bar:'positive', desc:'Hedef fiyata ulasilirsa potansiyel kazanc'},
+    {name:'52H Aralik Konumu', val:range52!==null&&!isNaN(range52)?'%'+fmt(range52,0):'N/A', cls:range52!==null&&range52>70?'neg':range52!==null&&range52<30?'pos':'', bar:range52!==null&&range52>70?'warning':'neutral', desc:range52!==null?(range52>70?'Zirveye yakin':range52<30?'Dibe yakin':'Orta bolge'):'Veri yok'},
+  ];
+  document.getElementById('metricsSection').innerHTML = metrics.map(m=>'<div class="metric-box '+m.bar+'"><div class="metric-name">'+m.name+'</div><div class="metric-val '+m.cls+'">'+m.val+'</div><div class="metric-desc">'+m.desc+'</div></div>').join('');
+
+  const allPrices = [{label:'Stop',val:(stop&&!isNaN(stop))?stop:null,color:'#ff1744'},{label:'Alis',val:(buy&&!isNaN(buy))?buy:null,color:'#ffd600'},{label:'Guncel',val:current,color:'#00d4ff'},{label:'Hedef',val:target,color:'#00e676'},{label:'52H Yuk.',val:(high52&&!isNaN(high52))?high52:null,color:'#ff9100'}].filter(p=>p.val!==null&&!isNaN(p.val)).sort((a,b)=>a.val-b.val);
+
+  if (allPrices.length > 0) {
+    const minP=Math.min(...allPrices.map(p=>p.val)), maxP=Math.max(...allPrices.map(p=>p.val)), rangeP=maxP-minP||1;
+    document.getElementById('priceChart').innerHTML='<div style="position:relative;height:80px;margin:0 20px;"><div style="position:absolute;top:50%;left:0;right:0;height:1px;background:var(--border);"></div>'+allPrices.map(p=>{const pct=((p.val-minP)/rangeP)*90+5;return'<div class="price-line" style="left:'+pct+'%;transform:translateX(-50%)"><div class="price-label">'+p.label+'</div><div style="width:1px;height:30px;background:'+p.color+';opacity:0.5;margin:0 auto;"></div><div class="price-val" style="color:'+p.color+'">₺'+p.val.toFixed(2)+'</div></div>';}).join('')+'</div>';
+  } else {
+    document.getElementById('priceChart').innerHTML = '<div style="text-align:center;color:var(--text-dim);padding:20px;">Fiyat verisi yok</div>';
+  }
+
+  const scenarios=[{name:'Boga Senaryosu',pct:upside*1.5,color:'#00e676'},{name:'Temel Hedef',pct:upside,color:'#69f0ae'},{name:'Baz Senaryo',pct:upside*0.5,color:'#ffd600'},{name:'Duzeltme',pct:-(downside||10)*0.5,color:'#ff9100'},{name:'Ayi Senaryosu',pct:-(downside||15),color:'#ff1744'}];
+  const maxAbs=Math.max(...scenarios.map(s=>Math.abs(s.pct)));
+  document.getElementById('scenarioBars').innerHTML=scenarios.map(s=>{const bp=(Math.abs(s.pct)/maxAbs)*100, price=current*(1+s.pct/100), sign=s.pct>=0?'+':'';return'<div class="scenario-bar"><div class="scenario-name">'+s.name+'</div><div class="bar-track"><div class="bar-fill" style="width:'+bp+'%;background:'+s.color+';"><span class="bar-fill-text">'+sign+s.pct.toFixed(1)+'%</span></div></div><div class="scenario-price" style="color:'+s.color+'">₺'+price.toFixed(2)+'</div></div>';}).join('');
+
+  const factors=[
+    {name:'Piyasa Volatilitesi (Beta)',desc:'Beta: '+beta.toFixed(2)+' - '+(beta>1.5?'Yuksek piyasa hassasiyeti':beta<0.8?'Dusuk volatilite, savunmaci':'Orta volatilite'),level:beta>1.5?'YUKSEK':beta<0.8?'DUSUK':'ORTA',color:beta>1.5?'#ff1744':beta<0.8?'#00e676':'#ffd600'},
+    {name:'Likidite Riski',desc:marketCap==='small'?'Kucuk olcekli hisse - dusuk likidite':marketCap==='large'?'Buyuk olcekli - yuksek likidite':'Orta olcek - makul likidite',level:marketCap==='small'?'YUKSEK':marketCap==='large'?'DUSUK':'ORTA',color:marketCap==='small'?'#ff1744':marketCap==='large'?'#00e676':'#ffd600'},
+    {name:'Sektor Riski',desc:sectorLabel(sector)+' sektoru',level:['teknoloji','insaat','enerji','havayolu'].includes(sector)?'YUKSEK':['savunma','perakende'].includes(sector)?'DUSUK':'ORTA',color:['teknoloji','insaat','enerji','havayolu'].includes(sector)?'#ff1744':['savunma','perakende'].includes(sector)?'#00e676':'#ffd600'},
+    {name:'52 Haftalik Konum',desc:range52!==null&&!isNaN(range52)?'Aralikta %'+range52.toFixed(0)+' konumunda':'Veri girilmedi',level:range52!==null&&!isNaN(range52)?(range52>75?'YUKSEK':range52<25?'DUSUK':'ORTA'):'BELIRSIZ',color:range52!==null&&!isNaN(range52)?(range52>75?'#ff1744':range52<25?'#00e676':'#ffd600'):'#4a6b8a'},
+    {name:'Stop-Loss Disiplini',desc:downside!==null&&!isNaN(downside)?'%'+downside.toFixed(1)+' stop mesafesi':'Stop belirlenmemis - acik risk!',level:stop&&(downside!==null&&!isNaN(downside))?(downside<8?'DUSUK':downside<15?'ORTA':'YUKSEK'):'KRITIK',color:stop&&(downside!==null&&!isNaN(downside))?(downside<8?'#00e676':downside<15?'#ffd600':'#ff9100'):'#ff1744'},
+  ];
+  document.getElementById('riskFactors').innerHTML=factors.map(f=>'<div class="risk-item"><div class="risk-item-left"><div class="risk-dot" style="background:'+f.color+';box-shadow:0 0 8px '+f.color+'44;"></div><div><div class="risk-factor-name">'+f.name+'</div><div class="risk-factor-desc">'+f.desc+'</div></div></div><div class="risk-badge" style="border-color:'+f.color+';color:'+f.color+';">'+f.level+'</div></div>').join('');
+
+  const combined=(riskScore<40?3:riskScore<55?2:riskScore<70?1:0)+(potScore>65?3:potScore>50?2:potScore>35?1:0);
+  const verdicts=[
+    {min:5,icon:'🚀',title:'GUCLU FIRSAT',color:'#00e676',text:(ticker||'Bu hisse')+' dusuk risk profili ve yuksek getiri potansiyeli ile one cikmaktadir.'},
+    {min:4,icon:'📊',title:'POZITIF GORUNUM',color:'#69f0ae',text:(ticker||'Bu hisse')+' dengeli bir risk-getiri profili sunmaktadir. Dikkatli pozisyon yonetimi onerilir.'},
+    {min:3,icon:'⚖️',title:'NOTR / DIKKATLI',color:'#ffd600',text:(ticker||'Bu hisse')+' icin risk ve potansiyel dengeli gorunmektedir. Kucuk pozisyonla giris degerlendirilebilir.'},
+    {min:2,icon:'⚠️',title:'DIKKATLI OL',color:'#ff9100',text:(ticker||'Bu hisse')+' yuksek risk barindirmaktadir. Daha iyi seviyeleri beklemek daha akilci olabilir.'},
+    {min:0,icon:'🛑',title:'YUKSEK RISK',color:'#ff1744',text:(ticker||'Bu hisse')+' mevcut parametrelerle yuksek risk tasimaktadir. Kosullarin iyilesmesi beklenmelidir.'},
+  ];
+  const v = verdicts.find(x => combined >= x.min);
+  document.getElementById('verdictSection').innerHTML='<div class="verdict-icon">'+v.icon+'</div><div class="verdict-text"><h3 style="color:'+v.color+'">'+v.title+'</h3><p>'+v.text+'</p></div>';
+
+  // GRAFIKLER - results gosterildikten sonra ciz
+  document.getElementById('results').classList.add('active');
+
+  setTimeout(() => {
+    // Fiyat gecmisi grafigi
+    if (priceHistory.length > 1) {
+      drawPriceHistory('priceHistoryCanvas', priceHistory);
+      document.getElementById('priceLegend').innerHTML = '<span><i style="background:#00d4ff"></i>Kapanis Fiyati (Gercek)</span>';
+    } else {
+      const demoHistory = generateDemoHistory(current);
+      drawPriceHistory('priceHistoryCanvas', demoHistory);
+      document.getElementById('priceLegend').innerHTML = '<span><i style="background:#00d4ff"></i>Kapanis Fiyati (Tahmini)</span>';
+    }
+
+    // Radar chart
+    const radarFactors = [
+      {name:'Beta', value: Math.min((beta/2)*100, 100)},
+      {name:'Likidite', value: marketCap==='large'?20:marketCap==='mid'?50:80},
+      {name:'Sektor', value: ['teknoloji','insaat','enerji','havayolu'].includes(sector)?80:['savunma','perakende'].includes(sector)?30:50},
+      {name:'52H Konum', value: range52!==null&&!isNaN(range52)?range52:50},
+      {name:'Stop-Loss', value: stop&&(downside!==null&&!isNaN(downside))?(downside>20?80:downside>10?50:20):90}
+    ];
+    drawRadar('radarCanvas', radarFactors);
+
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 300);
+}
+
+function generateDemoHistory(currentPrice) {
+  const history = [];
+  const days = 30;
+  let price = currentPrice * 0.85;
+  const today = new Date();
+  for (let i = days; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const change = (Math.random() - 0.45) * 0.04;
+    price = price * (1 + change);
+    if (i === 0) price = currentPrice;
+    history.push({ date: date, close: price, high: price * 1.02, low: price * 0.98, open: price * (1 - change * 0.5) });
+  }
+  return history;
+}
+
+// Enter tusu ile hesaplama
+document.addEventListener('keydown', e => { if(e.key==='Enter' && e.target.tagName !== 'INPUT') calculate(); });
+</script>
+</body>
+</html>
