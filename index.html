@@ -403,15 +403,32 @@ function selectStock(sym) {
 
 function sectorLabel(s) { const m = {banka:'BANKACILIK',sanayi:'SANAYI',enerji:'ENERJI',teknoloji:'TEKNOLOJI',perakende:'PERAKENDE',insaat:'INSAAT',havayolu:'HAVAYOLU',savunma:'SAVUNMA',diger:'DIGER'}; return m[s] || s.toUpperCase(); }
 
-// ==================== CORS PROXY ILE CANLI VERI ====================
-const CORS_PROXY = 'https://corsproxy.io/?';
+// ==================== CORS PROXY LISTESI (FALLBACK) ====================
+const PROXY_LIST = [
+  'https://corsproxy.io/?url=',
+  'https://api.allorigins.win/raw?url=',
+  'https://api.codetabs.com/v1/proxy?quest=',
+];
 
-async function fetchViaProxy(url) {
-  const resp = await fetch(CORS_PROXY + encodeURIComponent(url), { headers: { 'Accept': 'application/json' } });
-  if (!resp.ok) throw new Error('HTTP ' + resp.status);
-  return await resp.json();
+async function fetchWithProxy(targetUrl) {
+  let lastError = null;
+  for (const proxy of PROXY_LIST) {
+    try {
+      const fullUrl = proxy + encodeURIComponent(targetUrl);
+      const resp = await fetch(fullUrl, { headers: { 'Accept': 'application/json' }, signal: AbortSignal.timeout(8000) });
+      if (!resp.ok) { lastError = 'HTTP ' + resp.status; continue; }
+      const data = await resp.json();
+      return data;
+    } catch(e) {
+      lastError = e.message;
+      console.log('Proxy basarisiz:', proxy, '-', e.message);
+      continue;
+    }
+  }
+  throw new Error('Tum proxyler basarisiz. Son hata: ' + lastError);
 }
 
+// ==================== CANLI FIYAT CEKME ====================
 async function manualFetch() {
   const sym = stockInput.value.toUpperCase().trim();
   if (!sym) { showError('Lutfen bir hisse kodu girin.'); return; }
@@ -434,9 +451,9 @@ async function fetchLivePrice() {
   isLiveData = false;
 
   try {
-    // 1) Quote verisi (proxy ile)
+    // 1) Quote verisi
     const quoteUrl = 'https://query1.finance.yahoo.com/v7/finance/quote?symbols=' + yahooSym;
-    const quoteData = await fetchViaProxy(quoteUrl);
+    const quoteData = await fetchWithProxy(quoteUrl);
 
     let d = null;
     if (quoteData && quoteData.quoteResponse && quoteData.quoteResponse.result && quoteData.quoteResponse.result.length > 0) {
@@ -459,10 +476,10 @@ async function fetchLivePrice() {
     updateTickerItem(sym, parsed);
     autofillFromLive();
 
-    // 2) Chart verisi (proxy ile)
+    // 2) Chart verisi
     try {
       const chartUrl = 'https://query1.finance.yahoo.com/v8/finance/chart/' + yahooSym + '?interval=1d&range=1mo';
-      const chartData = await fetchViaProxy(chartUrl);
+      const chartData = await fetchWithProxy(chartUrl);
       priceHistory = [];
       if (chartData && chartData.chart && chartData.chart.result && chartData.chart.result.length > 0) {
         const result = chartData.chart.result[0];
@@ -473,7 +490,7 @@ async function fetchLivePrice() {
 
   } catch(e) {
     console.error('Canli veri hatasi:', e);
-    showInfo('Canli veri cekilemedi (' + e.message + '). Demo veriler yukleniyor. Formu manuel doldurabilirsiniz.');
+    showInfo('Canli veri cekilemedi (' + e.message + '). Demo veriler yukleniyor.');
     loadDemoData(sym);
   } finally {
     btn.disabled = false; btnText.innerHTML = '📡 CANLI FIYAT CEK';
